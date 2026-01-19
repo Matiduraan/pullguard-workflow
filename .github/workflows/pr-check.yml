@@ -30,7 +30,7 @@ jobs:
             | jq -r '.value')
 
           RESPONSE=$(curl -s -X GET \
-            "https://api.tu-backend.com/${OWNER}/${REPO_NAME}/${PR_NUMBER}/status?headSha=${SHA}" \
+            "https://more-rationally-fawn.ngrok-free.app/api/quiz/${OWNER}/${REPO_NAME}/${PR_NUMBER}/status?headSha=${SHA}" \
             -H "Authorization: Bearer $OIDC_TOKEN")
 
           echo "Backend response: $RESPONSE"
@@ -51,7 +51,7 @@ jobs:
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=tu-backend" \
             | jq -r '.value')
 
-          curl -s -X POST https://api.tu-backend.com/analyze \
+          curl -s -X POST https://more-rationally-fawn.ngrok-free.app/api/quiz \
             -H "Authorization: Bearer $OIDC_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{
