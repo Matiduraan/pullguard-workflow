@@ -26,28 +26,27 @@ jobs:
         id: check-status
         env:
           INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
-          REPO: ${{ github.repository }}
-          ORG: ${{ github.repository_owner }}
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           RESPONSE=$(curl -s -X GET \
-            "https://api.tu-backend.com/${ORG}/${REPO#*/}/${PR_NUMBER}/status?headSha=${SHA}" \
+            "https://api.tu-backend.com/${OWNER}/${REPO_NAME}/${PR_NUMBER}/status?headSha=${SHA}" \
             -H "Authorization: Bearer $INSTALLATION_TOKEN")
 
           echo "Backend response: $RESPONSE"
 
           STATUS=$(echo "$RESPONSE" | jq -r '.status')
-
           echo "status=$STATUS" >> $GITHUB_OUTPUT
 
-      - name: Create quiz
+      - name: Create quiz (only if NOT_CREATED)
         if: steps.check-status.outputs.status == 'NOT_CREATED'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
-          REPO: ${{ github.repository }}
-          ORG: ${{ github.repository_owner }}
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -55,20 +54,13 @@ jobs:
             -H "Authorization: Bearer $INSTALLATION_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{
-              "organization": "'"$ORG"'",
-              "repository": "'"${REPO#*/}"'",
+              "organization": "'"$OWNER"'",
+              "repository": "'"$REPO_NAME"'",
               "pullRequest": '"$PR_NUMBER"',
               "sha": "'"$SHA"'",
               "llmApiKey": "'"$OPENAI_API_KEY"'"
             }'
 
-      - name: Mark success (already completed)
-        if: steps.check-status.outputs.status == 'COMPLETED'
+      - name: Finish workflow
         run: |
-          echo "Quiz already completed. Marking workflow as success."
-
-      - name: Mark failure (quiz failed)
-        if: steps.check-status.outputs.status == 'FAILED'
-        run: |
-          echo "Quiz previously failed."
-          exit 1
+          echo "Workflow finished. Merge decision is controlled by the GitHub Check Run."
