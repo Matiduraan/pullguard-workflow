@@ -1,0 +1,74 @@
+name: PR Check
+
+on:
+  workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+      GITHUB_APP_ID:
+        required: true
+      GITHUB_APP_PRIVATE_KEY:
+        required: true
+
+jobs:
+  pr-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GITHUB_APP_ID }}
+          private-key: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Check quiz status
+        id: check-status
+        env:
+          INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          ORG: ${{ github.repository_owner }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          RESPONSE=$(curl -s -X GET \
+            "https://api.tu-backend.com/${ORG}/${REPO#*/}/${PR_NUMBER}/status?headSha=${SHA}" \
+            -H "Authorization: Bearer $INSTALLATION_TOKEN")
+
+          echo "Backend response: $RESPONSE"
+
+          STATUS=$(echo "$RESPONSE" | jq -r '.status')
+
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+      - name: Create quiz
+        if: steps.check-status.outputs.status == 'NOT_CREATED'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          ORG: ${{ github.repository_owner }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          curl -X POST https://api.tu-backend.com/analyze \
+            -H "Authorization: Bearer $INSTALLATION_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "organization": "'"$ORG"'",
+              "repository": "'"${REPO#*/}"'",
+              "pullRequest": '"$PR_NUMBER"',
+              "sha": "'"$SHA"'",
+              "llmApiKey": "'"$OPENAI_API_KEY"'"
+            }'
+
+      - name: Mark success (already completed)
+        if: steps.check-status.outputs.status == 'COMPLETED'
+        run: |
+          echo "Quiz already completed. Marking workflow as success."
+
+      - name: Mark failure (quiz failed)
+        if: steps.check-status.outputs.status == 'FAILED'
+        run: |
+          echo "Quiz previously failed."
+          exit 1
