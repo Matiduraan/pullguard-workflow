@@ -54,12 +54,12 @@ jobs:
           curl -s -X POST https://more-rationally-fawn.ngrok-free.app/api/quiz \
             -H "Authorization: Bearer $OIDC_TOKEN" \
             -H "Content-Type: application/json" \
+            -H "x-llm-api-key: $OPENAI_API_KEY" \
             -d '{
               "organization": "'"$OWNER"'",
               "repository": "'"$REPO_NAME"'",
               "pullRequest": '"$PR_NUMBER"',
-              "sha": "'"$SHA"'",
-              "llmApiKey": "'"$OPENAI_API_KEY"'"
+              "sha": "'"$SHA"'"
             }'
 
       - name: Finish workflow
