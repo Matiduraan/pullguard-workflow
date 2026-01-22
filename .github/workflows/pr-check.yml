@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-      id-token: write   # OBLIGATORIO para OIDC
+      id-token: write # OBLIGATORIO para OIDC
 
     steps:
       - name: Request quiz status
@@ -35,7 +35,7 @@ jobs:
 
           echo "Backend response: $RESPONSE"
 
-          STATUS=$(echo "$RESPONSE" | jq -r '.status')
+          STATUS=$(echo "$RESPONSE" | jq -r '.quizStatus.status')
           echo "status=$STATUS" >> $GITHUB_OUTPUT
 
       - name: Create quiz (only if NOT_CREATED)
