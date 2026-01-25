@@ -38,8 +38,8 @@ jobs:
           STATUS=$(echo "$RESPONSE" | jq -r '.quizStatus.status')
           echo "status=$STATUS" >> $GITHUB_OUTPUT
 
-      - name: Create quiz (only if NOT_CREATED)
-        if: steps.check-status.outputs.status == 'NOT_CREATED'
+      - name: Create quiz (only if NOT_CREATED or FAILED)
+        if: steps.check-status.outputs.status == 'NOT_CREATED' || steps.check-status.outputs.status == 'FAILED'
         env:
           OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
